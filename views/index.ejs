@@ -1,9 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-    <link rel="stylesheet" type="text/css" href="/styles.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Excel File Center</title>
+  <link rel="stylesheet" type="text/css" href="/styles.css" />
 </head>
 <body>
-    <h1>Hello world</h1>
+  <main class="page">
+    <section class="card">
+      <div class="card__header">
+        <div>
+          <p class="eyebrow">Excel File Center</p>
+          <h1>엑셀 파일 업로드</h1>
+          <p class="sub">업로드된 파일은 바로 다운로드하거나 삭제할 수 있어요.</p>
+        </div>
+        <form class="upload" action="/upload" method="post" enctype="multipart/form-data">
+          <label class="file">
+            <input type="file" name="excel" accept=".xls,.xlsx,.xlsm,.xlsb" required />
+            <span>파일 선택</span>
+          </label>
+          <button class="btn primary" type="submit">업로드</button>
+        </form>
+      </div>
+
+      <% if (error) { %>
+        <div class="alert"><%= error %></div>
+      <% } %>
+
+      <div class="table">
+        <div class="table__head">
+          <div>파일명</div>
+          <div>용량</div>
+          <div>업데이트</div>
+          <div class="align-right">작업</div>
+        </div>
+        <% if (!files || files.length === 0) { %>
+          <div class="table__empty">업로드된 파일이 없습니다.</div>
+        <% } %>
+        <% files.forEach((file) => { %>
+          <div class="table__row" data-name="<%= file.name %>">
+            <div class="file-name"><%= file.name %></div>
+            <div class="meta"><%= file.sizeLabel %></div>
+            <div class="meta"><%= file.updatedLabel %></div>
+            <div class="actions">
+              <a class="btn ghost" href="/files/<%= encodeURIComponent(file.name) %>/download">다운로드</a>
+              <button class="btn danger" type="button" data-action="delete" data-name="<%= file.name %>">삭제</button>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    document.addEventListener('click', async (event) => {
+      const button = event.target.closest('button[data-action="delete"]');
+      if (!button) return;
+
+      const name = button.dataset.name;
+      if (!confirm(`"${name}" 파일을 삭제할까요?`)) return;
+
+      try {
+        const response = await fetch(`/files/${encodeURIComponent(name)}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.message || '삭제에 실패했습니다.');
+        }
+        const row = button.closest('.table__row');
+        if (row) row.remove();
+      } catch (err) {
+        alert(err.message || '삭제에 실패했습니다.');
+      }
+    });
+  </script>
 </body>
 </html>
