@@ -13,7 +13,7 @@
         <div>
           <p class="eyebrow">Excel File Center</p>
           <h1>엑셀 파일 업로드</h1>
-          <p class="sub">정적 페이지 데모입니다. 실제 업로드/삭제/다운로드는 동작하지 않아요.</p>
+          <p class="sub">Firebase Hosting + Functions + Storage로 동작하는 버전입니다.</p>
         </div>
         <form class="upload" id="uploadForm">
           <label class="file">
@@ -24,7 +24,7 @@
         </form>
       </div>
 
-      <div class="alert" id="demoAlert" hidden>이 페이지는 정적 데모라서 서버 저장 기능이 없습니다.</div>
+      <div class="alert" id="alert" hidden></div>
 
       <div class="table">
         <div class="table__head">
@@ -33,38 +33,101 @@
           <div>업데이트</div>
           <div class="align-right">작업</div>
         </div>
-        <div class="table__row">
-          <div class="file-name">예시_보고서.xlsx</div>
-          <div class="meta">128 KB</div>
-          <div class="meta">2026-01-29 10:30</div>
-          <div class="actions">
-            <button class="btn ghost" type="button" data-action="demo">다운로드</button>
-            <button class="btn danger" type="button" data-action="demo">삭제</button>
-          </div>
-        </div>
-        <div class="table__empty">정적 데모이므로 실제 파일 목록은 표시되지 않습니다.</div>
+        <div class="table__body" id="tableBody"></div>
       </div>
     </section>
   </main>
 
   <script>
-    const demoAlert = document.getElementById('demoAlert');
+    const tableBody = document.getElementById('tableBody');
+    const alertBox = document.getElementById('alert');
     const uploadForm = document.getElementById('uploadForm');
 
-    const showDemoAlert = () => {
-      demoAlert.hidden = false;
-      demoAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const showAlert = (message) => {
+      alertBox.textContent = message;
+      alertBox.hidden = false;
     };
 
-    uploadForm.addEventListener('submit', (event) => {
+    const hideAlert = () => {
+      alertBox.hidden = true;
+    };
+
+    const formatBytes = (bytes) => {
+      if (!bytes) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB'];
+      const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+      return `${(bytes / (1024 ** index)).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+    };
+
+    const renderEmpty = () => {
+      tableBody.innerHTML = '<div class="table__empty">업로드된 파일이 없습니다.</div>';
+    };
+
+    const renderFiles = (files) => {
+      if (!files || files.length === 0) {
+        renderEmpty();
+        return;
+      }
+      tableBody.innerHTML = files.map((file) => {
+        const updated = file.updated ? new Date(file.updated).toLocaleString() : '-';
+        return `
+          <div class="table__row" data-name="${file.name}">
+            <div class="file-name">${file.name}</div>
+            <div class="meta">${formatBytes(file.size)}</div>
+            <div class="meta">${updated}</div>
+            <div class="actions">
+              <a class="btn ghost" href="/api/files/${encodeURIComponent(file.name)}/download">다운로드</a>
+              <button class="btn danger" type="button" data-action="delete" data-name="${file.name}">삭제</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    };
+
+    const fetchFiles = async () => {
+      const response = await fetch('/api/files');
+      if (!response.ok) throw new Error('목록을 가져오지 못했습니다.');
+      const payload = await response.json();
+      renderFiles(payload.files || []);
+    };
+
+    uploadForm.addEventListener('submit', async (event) => {
       event.preventDefault();
-      showDemoAlert();
+      hideAlert();
+      const formData = new FormData(uploadForm);
+      try {
+        const response = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.message || '업로드에 실패했습니다.');
+        }
+        uploadForm.reset();
+        await fetchFiles();
+      } catch (err) {
+        showAlert(err.message || '업로드에 실패했습니다.');
+      }
     });
 
-    document.addEventListener('click', (event) => {
-      const button = event.target.closest('button[data-action="demo"]');
+    document.addEventListener('click', async (event) => {
+      const button = event.target.closest('button[data-action="delete"]');
       if (!button) return;
-      showDemoAlert();
+      const name = button.dataset.name;
+      if (!confirm(`"${name}" 파일을 삭제할까요?`)) return;
+      try {
+        const response = await fetch(`/api/files/${encodeURIComponent(name)}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.message || '삭제에 실패했습니다.');
+        }
+        await fetchFiles();
+      } catch (err) {
+        showAlert(err.message || '삭제에 실패했습니다.');
+      }
+    });
+
+    fetchFiles().catch((err) => {
+      showAlert(err.message || '데이터를 불러오지 못했습니다.');
+      renderEmpty();
     });
   </script>
 </body>
