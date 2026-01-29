@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Excel File Center</title>
+  <link rel="stylesheet" type="text/css" href="/styles.css" />
+</head>
+<body>
+  <main class="page">
+    <section class="card">
+      <div class="card__header">
+        <div>
+          <p class="eyebrow">Excel File Center</p>
+          <h1>엑셀 파일 업로드</h1>
+          <p class="sub">정적 페이지 데모입니다. 실제 업로드/삭제/다운로드는 동작하지 않아요.</p>
+        </div>
+        <form class="upload" id="uploadForm">
+          <label class="file">
+            <input type="file" name="excel" accept=".xls,.xlsx,.xlsm,.xlsb" required />
+            <span>파일 선택</span>
+          </label>
+          <button class="btn primary" type="submit">업로드</button>
+        </form>
+      </div>
+
+      <div class="alert" id="demoAlert" hidden>이 페이지는 정적 데모라서 서버 저장 기능이 없습니다.</div>
+
+      <div class="table">
+        <div class="table__head">
+          <div>파일명</div>
+          <div>용량</div>
+          <div>업데이트</div>
+          <div class="align-right">작업</div>
+        </div>
+        <div class="table__row">
+          <div class="file-name">예시_보고서.xlsx</div>
+          <div class="meta">128 KB</div>
+          <div class="meta">2026-01-29 10:30</div>
+          <div class="actions">
+            <button class="btn ghost" type="button" data-action="demo">다운로드</button>
+            <button class="btn danger" type="button" data-action="demo">삭제</button>
+          </div>
+        </div>
+        <div class="table__empty">정적 데모이므로 실제 파일 목록은 표시되지 않습니다.</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const demoAlert = document.getElementById('demoAlert');
+    const uploadForm = document.getElementById('uploadForm');
+
+    const showDemoAlert = () => {
+      demoAlert.hidden = false;
+      demoAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    uploadForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      showDemoAlert();
+    });
+
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action="demo"]');
+      if (!button) return;
+      showDemoAlert();
+    });
+  </script>
+</body>
+</html>
